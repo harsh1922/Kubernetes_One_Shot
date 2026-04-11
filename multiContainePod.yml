@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-redis-pod
+spec:
+  containers:
+    - name: node-app
+      image: node:18-alpine
+      command: ["sh", "-c"]
+      args:
+        - |
+          npm init -y
+          npm install express redis
+          node -e '
+          const express = require("express");
+          const redis = require("redis");
+          const app = express();
+
+          const client = redis.createClient({
+            url: "redis://localhost:6379"
+          });
+
+          async function start() {
+            await client.connect();
+
+            app.get("/", async (req, res) => {
+              await client.set("msg", "Hello from Redis");
+              const value = await client.get("msg");
+              res.send(value);
+            });
+
+            app.listen(3000, () => console.log("Server running"));
+          }
+
+          start();
+          '
+      ports:
+        - containerPort: 3000
+
+    - name: redis
+      image: redis:7-alpine
+      ports:
+        - containerPort: 6379
